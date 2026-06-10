@@ -1,11 +1,6 @@
 import os
 import streamlit as st
-from groq import Groq
-from dotenv import load_dotenv
-
-load_dotenv()
-
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+import google.generativeai as genai
 
 profile = {
     "name": "Gokula Krishnan J",
@@ -28,14 +23,23 @@ profile = {
 }
 
 st.title("🎯 Internship Agent")
-st.write("Paste a job description below and I'll score your fit and draft an application message.")
+st.write("AI-powered internship fit scorer and application drafter")
+
+api_key = st.text_input("Enter your Gemini API Key", type="password", placeholder="Get free key at aistudio.google.com")
 
 job_desc = st.text_area("Job Description", height=200)
 
 if st.button("Analyze & Draft"):
-    if job_desc:
+    if not api_key:
+        st.warning("Please enter your Gemini API key first.")
+    elif not job_desc:
+        st.warning("Please paste a job description.")
+    else:
         with st.spinner("Analyzing..."):
-            prompt = f"""
+            try:
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel("gemini-2.0-flash")
+                prompt = f"""
 You are an internship application assistant.
 
 Candidate Profile:
@@ -47,10 +51,7 @@ Job Description:
 1. Score the fit out of 10 with reasoning
 2. Draft a personalized application message highlighting matching skills and projects
 """
-            response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "user", "content": prompt}]
-            )
-            st.markdown(response.choices[0].message.content)
-    else:
-        st.warning("Please paste a job description first.")
+                response = model.generate_content(prompt)
+                st.markdown(response.text)
+            except Exception as e:
+                st.error(f"Error: {e}")
